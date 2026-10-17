@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>تقييم التفاعل</title>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background:#f3f4f6; margin:0; padding:20px; }
+  .box { max-width:760px; margin:auto; background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px #0002; }
+  h1 { text-align:center; margin-top:0; }
+  .row { display:flex; gap:8px; margin-bottom:8px; }
+  input { padding:10px; border:1px solid #ccc; border-radius:8px; font-size:16px; flex:1; }
+  input[type=number] { max-width:160px; }
+  button { padding:10px 16px; border:0; border-radius:8px; background:#2563eb; color:#fff; font-size:16px; cursor:pointer; }
+  button.del { background:#dc2626; padding:6px 10px; }
+  button.gray { background:#4b5563; }
+  table { width:100%; border-collapse:collapse; margin-top:16px; }
+  th, td { padding:10px; border-bottom:1px solid #e5e7eb; text-align:center; }
+  .r-vg { color:#047857; font-weight:bold; } .r-g { color:#16a34a; font-weight:bold; }
+  .r-n { color:#d97706; font-weight:bold; } .r-b { color:#dc2626; font-weight:bold; }
+  textarea { width:100%; height:160px; margin-top:12px; padding:10px; box-sizing:border-box; font-size:15px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>تقييم التفاعل</h1>
+  <div class="row">
+    <input id="name" placeholder="المنشن / الاسم (مثال: @ahmed)">
+    <input id="count" type="number" min="0" placeholder="عدد التنزيل">
+    <button id="add">إضافة</button>
+  </div>
+  <table>
+    <thead><tr><th>الشخص</th><th>العدد</th><th>النسبة</th><th>التقييم</th><th></th></tr></thead>
+    <tbody id="list"></tbody>
+  </table>
+  <div class="row" style="margin-top:12px">
+    <button id="copy">نسخ النتائج</button>
+    <button id="clear" class="gray">مسح الكل</button>
+  </div>
+  <textarea id="out" readonly placeholder="النتائج"></textarea>
+</div>
+<script>
+const KEY = "engagement_people";
+let people = JSON.parse(localStorage.getItem(KEY) || "[]");
+
+function grade(p) {
+  if (p >= 85) return ["ممتاز جدا", "r-vg"];
+  if (p >= 70) return ["ممتاز", "r-g"];
+  if (p >= 45) return ["جيد جدا", "r-n"];
+  if (p > 40)  return ["جيد", "r-n"];
+  return ["سيء", "r-b"];
+}
+
+function render() {
+  localStorage.setItem(KEY, JSON.stringify(people));
+  const max = Math.max(0, ...people.map(x => x.count));
+  const list = document.getElementById("list");
+  list.replaceChildren();
+  const lines = [];
+  people.forEach((x, i) => {
+    const pct = max ? (x.count / max) * 100 : 0;
+    const [label, cls] = grade(pct);
+    const tr = document.createElement("tr");
+    const cells = [x.name, x.count, pct.toFixed(1) + "%"];
+    cells.forEach(t => { const td = document.createElement("td"); td.textContent = t; tr.appendChild(td); });
+    const g = document.createElement("td"); g.textContent = label; g.className = cls; tr.appendChild(g);
+    const d = document.createElement("td");
+    const b = document.createElement("button"); b.textContent = "حذف"; b.className = "del";
+    b.onclick = () => { people.splice(i, 1); render(); };
+    d.appendChild(b); tr.appendChild(d);
+    list.appendChild(tr);
+    lines.push(`${x.name} : ${label} (${pct.toFixed(1)}%)`);
+  });
+  document.getElementById("out").value = lines.join("\n");
+}
+
+document.getElementById("add").onclick = () => {
+  const name = document.getElementById("name").value.trim();
+  const count = Number(document.getElementById("count").value);
+  if (!name || !(count >= 0) || document.getElementById("count").value === "") return;
+  people.push({ name, count });
+  document.getElementById("name").value = "";
+  document.getElementById("count").value = "";
+  document.getElementById("name").focus();
+  render();
+};
+document.getElementById("count").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("add").click(); });
+document.getElementById("copy").onclick = () => navigator.clipboard.writeText(document.getElementById("out").value);
+document.getElementById("clear").onclick = () => { if (confirm("مسح كل البيانات؟")) { people = []; render(); } };
+render();
+</script>
+</body>
+</html>
