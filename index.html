@@ -5,88 +5,212 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>تقييم التفاعل</title>
 <style>
-  body { font-family: Tahoma, Arial, sans-serif; background:#f3f4f6; margin:0; padding:20px; }
-  .box { max-width:760px; margin:auto; background:#fff; padding:20px; border-radius:12px; box-shadow:0 2px 8px #0002; }
-  h1 { text-align:center; margin-top:0; }
-  .row { display:flex; gap:8px; margin-bottom:8px; }
-  input { padding:10px; border:1px solid #ccc; border-radius:8px; font-size:16px; flex:1; }
-  input[type=number] { max-width:160px; }
-  button { padding:10px 16px; border:0; border-radius:8px; background:#2563eb; color:#fff; font-size:16px; cursor:pointer; }
-  button.del { background:#dc2626; padding:6px 10px; }
-  button.gray { background:#4b5563; }
-  table { width:100%; border-collapse:collapse; margin-top:16px; }
-  th, td { padding:10px; border-bottom:1px solid #e5e7eb; text-align:center; }
-  .r-vg { color:#047857; font-weight:bold; } .r-g { color:#16a34a; font-weight:bold; }
-  .r-n { color:#d97706; font-weight:bold; } .r-b { color:#dc2626; font-weight:bold; }
-  textarea { width:100%; height:160px; margin-top:12px; padding:10px; box-sizing:border-box; font-size:15px; }
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --txt:#e2e8f0; --mut:#94a3b8; --pri:#3b82f6;
+          --vg:#10b981; --g:#22c55e; --n:#f59e0b; --ok:#eab308; --b:#ef4444; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Tahoma,Arial,sans-serif; background:var(--bg); color:var(--txt); padding:20px; }
+  .wrap { max-width:1100px; margin:auto; }
+  h1 { margin:0 0 16px; text-align:center; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; }
+  .stat { background:var(--bg); border:2px solid transparent; border-radius:12px; padding:12px; text-align:center; cursor:pointer; }
+  .stat.active { border-color:var(--pri); }
+  .stat b { display:block; font-size:26px; margin-top:4px; }
+  .stat span { color:var(--mut); font-size:14px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  input, textarea, select { background:var(--bg); color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:10px; font-size:15px; font-family:inherit; }
+  input:focus, textarea:focus { outline:2px solid var(--pri); }
+  textarea { width:100%; min-height:110px; resize:vertical; }
+  button { background:var(--pri); color:#fff; border:0; border-radius:8px; padding:10px 16px; font-size:15px; cursor:pointer; font-family:inherit; }
+  button:hover { filter:brightness(1.15); }
+  button:disabled { opacity:.4; cursor:default; }
+  button.sec { background:var(--line); } button.red { background:var(--b); }
+  .grow { flex:1; min-width:140px; }
+  .hint { color:var(--mut); font-size:13px; margin:6px 0 0; }
+  .tablewrap { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th { color:var(--mut); font-weight:normal; text-align:right; padding:8px; border-bottom:1px solid var(--line); }
+  td { padding:8px; border-bottom:1px solid var(--line); }
+  td.num { width:50px; color:var(--mut); }
+  td input.cnt { width:90px; padding:5px 8px; }
+  .bar { height:8px; background:var(--bg); border-radius:6px; overflow:hidden; min-width:100px; margin-top:4px; }
+  .bar i { display:block; height:100%; }
+  .badge { padding:4px 10px; border-radius:20px; font-size:13px; font-weight:bold; color:#000; white-space:nowrap; }
+  .pager { display:flex; justify-content:center; gap:8px; align-items:center; margin-top:12px; }
+  .empty { text-align:center; color:var(--mut); padding:30px; }
 </style>
 </head>
 <body>
-<div class="box">
+<div class="wrap">
   <h1>تقييم التفاعل</h1>
-  <div class="row">
-    <input id="name" placeholder="المنشن / الاسم (مثال: @ahmed)">
-    <input id="count" type="number" min="0" placeholder="عدد التنزيل">
-    <button id="add">إضافة</button>
-  </div>
-  <table>
-    <thead><tr><th>الشخص</th><th>العدد</th><th>النسبة</th><th>التقييم</th><th></th></tr></thead>
-    <tbody id="list"></tbody>
-  </table>
-  <div class="row" style="margin-top:12px">
-    <button id="copy">نسخ النتائج</button>
-    <button id="clear" class="gray">مسح الكل</button>
-  </div>
-  <textarea id="out" readonly placeholder="النتائج"></textarea>
-</div>
-<script>
-const KEY = "engagement_people";
-let people = JSON.parse(localStorage.getItem(KEY) || "[]");
 
-function grade(p) {
-  if (p >= 85) return ["ممتاز جدا", "r-vg"];
-  if (p >= 70) return ["ممتاز", "r-g"];
-  if (p >= 45) return ["جيد جدا", "r-n"];
-  if (p > 40)  return ["جيد", "r-n"];
-  return ["سيء", "r-b"];
+  <div class="card">
+    <div class="grid" id="stats"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">إضافة أشخاص</h3>
+    <div class="row">
+      <input id="name" class="grow" placeholder="المنشن / الاسم">
+      <input id="count" type="number" min="0" placeholder="العدد" style="width:120px">
+      <button id="add">إضافة</button>
+    </div>
+    <p class="hint">أو الصق قائمة كاملة (سطر لكل شخص: الاسم ثم العدد، ويدعم النسخ من Excel):</p>
+    <textarea id="bulk" placeholder="@ahmed 120&#10;@sara 95&#10;@omar 40"></textarea>
+    <div class="row" style="margin-top:8px">
+      <button id="bulkAdd">إضافة القائمة</button>
+      <label class="hint">أو ملف CSV/TXT: <input type="file" id="file" accept=".csv,.txt"></label>
+      <span class="hint" id="msg"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:12px">
+      <input id="search" class="grow" placeholder="بحث بالاسم...">
+      <select id="sort">
+        <option value="desc">الأعلى تفاعلاً</option>
+        <option value="asc">الأقل تفاعلاً</option>
+        <option value="name">الاسم</option>
+      </select>
+      <button id="copy">نسخ النتائج</button>
+      <button id="csv" class="sec">تصدير CSV</button>
+      <button id="clear" class="red">مسح الكل</button>
+    </div>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>#</th><th>الشخص</th><th>العدد</th><th>النسبة</th><th>التقييم</th><th></th></tr></thead>
+        <tbody id="list"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" hidden>لا توجد بيانات</div>
+    <div class="pager">
+      <button class="sec" id="prev">السابق</button>
+      <span id="pageInfo"></span>
+      <button class="sec" id="next">التالي</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const KEY = "engagement_people_v2", PAGE = 50;
+const GRADES = [
+  { id:"vg", label:"ممتاز جدا", min:85,  color:"var(--vg)" },
+  { id:"g",  label:"ممتاز",     min:70,  color:"var(--g)" },
+  { id:"n",  label:"جيد جدا",   min:45,  color:"var(--n)" },
+  { id:"ok", label:"جيد",       min:40.0001, color:"var(--ok)" },
+  { id:"b",  label:"سيء",       min:-1,  color:"var(--b)" }
+];
+let people = JSON.parse(localStorage.getItem(KEY) || localStorage.getItem("engagement_people") || "[]");
+let filter = null, page = 0, max = 0;
+const $ = id => document.getElementById(id);
+
+const gradeOf = p => GRADES.find(g => p >= g.min);
+const pctOf = c => max ? c / max * 100 : 0;
+
+function save() { localStorage.setItem(KEY, JSON.stringify(people)); }
+
+function upsert(name, count) {
+  const found = people.find(p => p.name.toLowerCase() === name.toLowerCase());
+  if (found) found.count = count; else people.push({ name, count });
+}
+
+function view() {
+  const q = $("search").value.trim().toLowerCase();
+  const rows = people.filter(p => (!q || p.name.toLowerCase().includes(q)) &&
+                                  (!filter || gradeOf(pctOf(p.count)).id === filter));
+  const s = $("sort").value;
+  rows.sort((a, b) => s === "name" ? a.name.localeCompare(b.name, "ar") : s === "asc" ? a.count - b.count : b.count - a.count);
+  return rows;
+}
+
+function renderStats() {
+  const cnt = Object.fromEntries(GRADES.map(g => [g.id, 0]));
+  people.forEach(p => cnt[gradeOf(pctOf(p.count)).id]++);
+  const box = $("stats"); box.replaceChildren();
+  const mk = (id, label, val, color, clickable = true) => {
+    const d = document.createElement("div");
+    d.className = "stat" + (filter === id && clickable ? " active" : "");
+    const s = document.createElement("span"); s.textContent = label;
+    const b = document.createElement("b"); b.textContent = val; if (color) b.style.color = color;
+    d.append(s, b);
+    if (clickable) d.onclick = () => { filter = filter === id ? null : id; page = 0; render(); };
+    box.appendChild(d);
+  };
+  mk(null, "الإجمالي", people.length);
+  mk(null, "أعلى عدد", max, null, false);
+  GRADES.forEach(g => mk(g.id, g.label, cnt[g.id], g.color));
 }
 
 function render() {
-  localStorage.setItem(KEY, JSON.stringify(people));
-  const max = Math.max(0, ...people.map(x => x.count));
-  const list = document.getElementById("list");
-  list.replaceChildren();
-  const lines = [];
-  people.forEach((x, i) => {
-    const pct = max ? (x.count / max) * 100 : 0;
-    const [label, cls] = grade(pct);
+  max = Math.max(0, ...people.map(p => p.count));
+  save();
+  renderStats();
+  const rows = view();
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  page = Math.min(page, pages - 1);
+  const list = $("list"); list.replaceChildren();
+  rows.slice(page * PAGE, page * PAGE + PAGE).forEach((p, i) => {
+    const pct = pctOf(p.count), g = gradeOf(pct);
     const tr = document.createElement("tr");
-    const cells = [x.name, x.count, pct.toFixed(1) + "%"];
-    cells.forEach(t => { const td = document.createElement("td"); td.textContent = t; tr.appendChild(td); });
-    const g = document.createElement("td"); g.textContent = label; g.className = cls; tr.appendChild(g);
-    const d = document.createElement("td");
-    const b = document.createElement("button"); b.textContent = "حذف"; b.className = "del";
-    b.onclick = () => { people.splice(i, 1); render(); };
-    d.appendChild(b); tr.appendChild(d);
+    const td = () => tr.appendChild(document.createElement("td"));
+    const n = td(); n.className = "num"; n.textContent = page * PAGE + i + 1;
+    td().textContent = p.name;
+    const c = document.createElement("input"); c.type = "number"; c.min = 0; c.className = "cnt"; c.value = p.count;
+    c.onchange = () => { p.count = Math.max(0, Number(c.value) || 0); render(); };
+    td().appendChild(c);
+    const bt = td(); bt.textContent = pct.toFixed(1) + "%";
+    const bar = document.createElement("div"); bar.className = "bar";
+    const fill = document.createElement("i"); fill.style.width = pct + "%"; fill.style.background = g.color;
+    bar.appendChild(fill); bt.appendChild(bar);
+    const gt = td(); const bd = document.createElement("span");
+    bd.className = "badge"; bd.style.background = g.color; bd.textContent = g.label; gt.appendChild(bd);
+    const d = document.createElement("button"); d.className = "red"; d.textContent = "حذف";
+    d.onclick = () => { people.splice(people.indexOf(p), 1); render(); };
+    td().appendChild(d);
     list.appendChild(tr);
-    lines.push(`${x.name} : ${label} (${pct.toFixed(1)}%)`);
   });
-  document.getElementById("out").value = lines.join("\n");
+  $("empty").hidden = rows.length > 0;
+  $("pageInfo").textContent = `صفحة ${page + 1} من ${pages} (${rows.length})`;
+  $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
 }
 
-document.getElementById("add").onclick = () => {
-  const name = document.getElementById("name").value.trim();
-  const count = Number(document.getElementById("count").value);
-  if (!name || !(count >= 0) || document.getElementById("count").value === "") return;
-  people.push({ name, count });
-  document.getElementById("name").value = "";
-  document.getElementById("count").value = "";
-  document.getElementById("name").focus();
+function parseLines(text) {
+  let ok = 0, bad = 0;
+  text.split(/\r?\n/).forEach(line => {
+    line = line.trim(); if (!line) return;
+    const m = line.match(/^(.*?)[\s,;\t]+(\d+(?:\.\d+)?)$/);
+    if (m && m[1].trim()) { upsert(m[1].trim().replace(/^["']|["']$/g, ""), Number(m[2])); ok++; } else bad++;
+  });
+  $("msg").textContent = `تمت إضافة ${ok}` + (bad ? ` وتجاهل ${bad} سطر غير صالح` : "");
   render();
+}
+
+function results() {
+  return view().map(p => `${p.name} : ${gradeOf(pctOf(p.count)).label} (${pctOf(p.count).toFixed(1)}%)`).join("\n");
+}
+
+$("add").onclick = () => {
+  const name = $("name").value.trim(), raw = $("count").value;
+  if (!name || raw === "" || Number(raw) < 0) return;
+  upsert(name, Number(raw));
+  $("name").value = ""; $("count").value = ""; $("name").focus(); render();
 };
-document.getElementById("count").addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("add").click(); });
-document.getElementById("copy").onclick = () => navigator.clipboard.writeText(document.getElementById("out").value);
-document.getElementById("clear").onclick = () => { if (confirm("مسح كل البيانات؟")) { people = []; render(); } };
+$("count").onkeydown = e => { if (e.key === "Enter") $("add").click(); };
+$("bulkAdd").onclick = () => { parseLines($("bulk").value); $("bulk").value = ""; };
+$("file").onchange = e => { const f = e.target.files[0]; if (f) f.text().then(parseLines); e.target.value = ""; };
+$("search").oninput = () => { page = 0; render(); };
+$("sort").onchange = () => { page = 0; render(); };
+$("prev").onclick = () => { page--; render(); };
+$("next").onclick = () => { page++; render(); };
+$("copy").onclick = () => navigator.clipboard.writeText(results()).then(() => $("msg").textContent = "تم النسخ");
+$("csv").onclick = () => {
+  const esc = s => `"${String(s).replace(/"/g, '""')}"`;
+  const body = view().map(p => [esc(p.name), p.count, pctOf(p.count).toFixed(1), esc(gradeOf(pctOf(p.count)).label)].join(","));
+  const blob = new Blob(["\uFEFF" + ["الاسم,العدد,النسبة,التقييم", ...body].join("\n")], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "التقييم.csv"; a.click();
+  URL.revokeObjectURL(a.href);
+};
+$("clear").onclick = () => { if (confirm("مسح كل البيانات؟")) { people = []; filter = null; render(); } };
 render();
 </script>
 </body>
